@@ -5,7 +5,7 @@ use std::collections::BTreeMap;
 use std::fs::{copy, read, File};
 use std::path::{Path, PathBuf};
 
-use crate::book::{Book, BookHash, Extension};
+use crate::book::{Book, BookHash};
 use crate::cmd::Command;
 
 #[derive(Serialize, Deserialize)]
@@ -65,19 +65,18 @@ impl Library {
         keywords: Vec<String>,
     ) -> Result<()> {
         let file = PathBuf::from(file);
-        let extension = Extension::from_str(
-            &file
-                .extension()
-                .ok_or_else(|| anyhow!("File {:?} has no extension", file))?
-                .to_str()
-                .ok_or_else(|| anyhow!("Extension is not valid unicode"))?,
-        )?;
+        let extension = file
+            .extension()
+            .ok_or_else(|| anyhow!("File {:?} has no extension", file))?
+            .to_str()
+            .ok_or_else(|| anyhow!("Extension is not valid unicode"))?
+            .to_lowercase();
 
         let hash: BookHash = md5::compute(read(&file).context("Could not read file")?)
             .0
             .into();
 
-        let path = self.path(hash, extension);
+        let path = self.path(hash, &extension);
 
         let book = Book {
             title,
@@ -86,8 +85,8 @@ impl Library {
             extension,
         };
 
-        let book_json =
-            serde_json::to_string_pretty(&book).context("Could not serialize document information as JSON")?;
+        let book_json = serde_json::to_string_pretty(&book)
+            .context("Could not serialize document information as JSON")?;
 
         ensure!(
             self.books.insert(hash, book).is_none(),
@@ -130,14 +129,14 @@ impl Library {
             .books
             .get(&hash)
             .ok_or_else(|| anyhow!("Book with hash {} not found", hash_str))?;
-        open::that(self.path(hash, book.extension)).context("Could not open document")?;
+        open::that(self.path(hash, &book.extension)).context("Could not open document")?;
         Ok(())
     }
 
-    fn path(&self, hash: BookHash, extension: Extension) -> PathBuf {
+    fn path(&self, hash: BookHash, extension: &str) -> PathBuf {
         let mut path = hex::encode(&<[u8; 16]>::from(hash));
         path += ".";
-        path += extension.to_str();
+        path += extension;
         self.root.join(path)
     }
 }

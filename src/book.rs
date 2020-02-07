@@ -1,41 +1,11 @@
-use anyhow::{bail, Result};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Book {
     pub title: String,
     pub authors: Vec<String>,
-    pub extension: Extension,
+    pub extension: String,
     pub keywords: Vec<String>,
-}
-
-#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
-pub enum Extension {
-    Pdf,
-    Mobi,
-    Epub,
-    Djvu,
-}
-
-impl Extension {
-    pub fn from_str(s: &str) -> Result<Self> {
-        Ok(match s.to_lowercase().as_str() {
-            "pdf" => Self::Pdf,
-            "mobi" => Self::Mobi,
-            "epub" => Self::Epub,
-            "djvu" => Self::Djvu,
-            _ => bail!("invalid extension {}", s),
-        })
-    }
-
-    pub fn to_str(&self) -> &str {
-        match self {
-            Self::Pdf => "pdf",
-            Self::Mobi => "mobi",
-            Self::Epub => "epub",
-            Self::Djvu => "djvu",
-        }
-    }
 }
 
 #[derive(Ord, PartialOrd, Eq, PartialEq, Clone, Copy)]

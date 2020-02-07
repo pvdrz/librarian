@@ -13,7 +13,13 @@ pub enum Command {
         title: Option<String>,
         #[structopt(short, long, help = "Authors of the book", conflicts_with = "isbn")]
         authors: Vec<String>,
-        #[structopt(short, long, help = "Get book information from Open Library using the ISBN", conflicts_with = "title", conflicts_with = "authors")]
+        #[structopt(
+            short,
+            long,
+            help = "Get book information from Open Library using the ISBN",
+            conflicts_with = "title",
+            conflicts_with = "authors"
+        )]
         isbn: Option<String>,
         #[structopt(short, long, help = "Keywords for the book")]
         keywords: Vec<String>,
@@ -27,6 +33,8 @@ pub enum Command {
         // #[structopt(short, long, help = "Keywords for the book")]
         // keywords: Vec<String>,
     },
+    #[structopt(about = "List all the book in the library")]
+    List,
     // #[structopt(about = "Updates the info of a specific book")]
     // Update {
     //     #[structopt(about = "Hash of the book to be updated")]
@@ -51,6 +59,5 @@ pub enum Command {
     Open {
         #[structopt(help = "Hash of the book to be opened")]
         hash: String,
-    }
+    },
 }
-

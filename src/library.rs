@@ -52,8 +52,8 @@ impl Library {
                 self.store(file, title, authors, keywords)
             }
             Command::Find { title } => self.find(title),
-
             Command::Open { hash } => self.open(hash),
+            Command::List => self.find("".to_owned()),
         }
     }
 

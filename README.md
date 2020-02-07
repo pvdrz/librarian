@@ -11,17 +11,17 @@ than one application to do it. So instead I wrote this small app to handle it.
 
 ## How?
 
-- Librarian keeps an index with all your books metadata at
+- Librarian keeps an index with all your documents' metadata at
   `~/.library/index.json`.
 
-- When you store a book using `librarian store`, the file is copied to the
-  `~/.library` folder and the metadata is added to the index file. Each book is
+- When you store a document using `librarian store`, the file is copied to the
+  `~/.library` folder and the metadata is added to the index file. Each document is
   indexed using the hash of the file.
 
 - Then you can search in your library using `librarian find`.
 
-- Once you found the book, you can open it using `librarian open` with the
-  book's hash. This is equivalent to using `open` or `xdg-open`
+- Once you found the document, you can open it using `librarian open` with the
+  document's hash. This is equivalent to using `open` or `xdg-open`
 
 For more help, run `librarian help`.
 
@@ -35,7 +35,8 @@ binary in your `$PATH`.
 This is just a MVP version. I haven't implemented a lot of functionality I'd
 like to have. Currently Librarian can:
 
-- Store documents with a title, multiple authors and multiple keywords or use
-  the ISBN to grab the book's information from Open Library.
+- Store documents with a title, multiple authors and multiple keywords or, if
+  the document is a book, use its ISBN to grab the document's information from
+  Open Library.
 - Find documents doing a case-insensitive substring search over the title.
 - Open documents using your default application for each format.

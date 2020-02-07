@@ -73,7 +73,7 @@ impl Library {
                 .ok_or_else(|| anyhow!("Extension is not valid unicode"))?,
         )?;
 
-        let hash: BookHash = md5::compute(read(&file).context("Could not read book file")?)
+        let hash: BookHash = md5::compute(read(&file).context("Could not read file")?)
             .0
             .into();
 
@@ -87,7 +87,7 @@ impl Library {
         };
 
         let book_json =
-            serde_json::to_string_pretty(&book).context("Could not serialize book as JSON")?;
+            serde_json::to_string_pretty(&book).context("Could not serialize document information as JSON")?;
 
         ensure!(
             self.books.insert(hash, book).is_none(),
@@ -97,9 +97,9 @@ impl Library {
         copy(file, path).context("Could not copy file to library")?;
 
         println!(
-            "Added book: {}\n with hash: {}",
+            "Added document: {}\n with hash: {}",
             book_json,
-            serde_json::to_string(&hash).context("Could not serialize book hash")?
+            serde_json::to_string(&hash).context("Could not serialize document hash")?
         );
 
         Ok(())
@@ -130,7 +130,7 @@ impl Library {
             .books
             .get(&hash)
             .ok_or_else(|| anyhow!("Book with hash {} not found", hash_str))?;
-        open::that(self.path(hash, book.extension)).context("Could not open book")?;
+        open::that(self.path(hash, book.extension)).context("Could not open document")?;
         Ok(())
     }
 
@@ -154,7 +154,7 @@ fn get_info(isbn: &str) -> Result<(String, Vec<String>)> {
         .call()
         .into_reader();
     let resp = serde_json::from_reader::<_, serde_json::Value>(resp)
-        .context("Could not deserialize book info from API")?
+        .context("Could not deserialize document information from the API")?
         .get(&isbn)
         .ok_or_else(|| anyhow!("Book with {} not found at Open Library", &isbn))?
         .clone();

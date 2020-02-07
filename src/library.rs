@@ -53,7 +53,7 @@ impl Library {
             }
             Command::Find { title } => self.find(title),
 
-            Command::Open { id } => self.open(id),
+            Command::Open { hash } => self.open(hash),
         }
     }
 
@@ -97,7 +97,7 @@ impl Library {
         copy(file, path).context("Could not copy file to library")?;
 
         println!(
-            "Added book: {}\n with ID: {}",
+            "Added book: {}\n with hash: {}",
             book_json,
             serde_json::to_string(&hash).context("Could not serialize book hash")?
         );
@@ -121,15 +121,15 @@ impl Library {
         Ok(())
     }
 
-    fn open(&self, id: String) -> Result<()> {
+    fn open(&self, hash_str: String) -> Result<()> {
         let mut hash = [0; 16];
-        hex::decode_to_slice(&id, &mut hash)
+        hex::decode_to_slice(&hash_str, &mut hash)
             .expect("bug: hash could not be decoded in 16 bytes array");
         let hash = hash.into();
         let book = self
             .books
             .get(&hash)
-            .ok_or_else(|| anyhow!("Book with id {} not found", id))?;
+            .ok_or_else(|| anyhow!("Book with hash {} not found", hash_str))?;
         open::that(self.path(hash, book.extension)).context("Could not open book")?;
         Ok(())
     }

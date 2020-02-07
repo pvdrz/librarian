@@ -51,7 +51,7 @@ impl Library {
                 };
                 self.store(file, title, authors, keywords)
             }
-            Command::Search { title } => self.search(title),
+            Command::Find { title } => self.find(title),
 
             Command::Open { id } => self.open(id),
         }
@@ -105,7 +105,7 @@ impl Library {
         Ok(())
     }
 
-    fn search(&self, title: String) -> Result<()> {
+    fn find(&self, title: String) -> Result<()> {
         let title = title.to_lowercase();
         let books: Vec<_> = self
             .books

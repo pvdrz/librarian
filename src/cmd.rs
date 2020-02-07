@@ -18,8 +18,8 @@ pub enum Command {
         #[structopt(short, long, help = "Keywords for the book")]
         keywords: Vec<String>,
     },
-    #[structopt(about = "Searches a book in the library")]
-    Search {
+    #[structopt(about = "Findes a book in the library")]
+    Find {
         #[structopt(short, long, help = "Title of the book")]
         title: String,
         // #[structopt(short, long, help = "Authors of the book")]

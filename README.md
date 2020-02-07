@@ -35,6 +35,7 @@ binary in your `$PATH`.
 This is just a MVP version. I haven't implemented a lot of functionality I'd
 like to have. Currently Librarian can:
 
-- Store documents with a title, multiple authors and multiple keywords.
+- Store documents with a title, multiple authors and multiple keywords or use
+  the ISBN to grab the book's information from Open Library.
 - Find documents doing a case-insensitive substring search over the title.
 - Open documents using your default application for each format.

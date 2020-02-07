@@ -9,10 +9,12 @@ pub enum Command {
     Store {
         #[structopt(help = "Path to the book to be stored")]
         file: String,
-        #[structopt(short, long, help = "Title of the book")]
-        title: String,
-        #[structopt(short, long, help = "Authors of the book")]
+        #[structopt(short, long, help = "Title of the book", conflicts_with = "isbn")]
+        title: Option<String>,
+        #[structopt(short, long, help = "Authors of the book", conflicts_with = "isbn")]
         authors: Vec<String>,
+        #[structopt(short, long, help = "Get book information from Open Library using the ISBN", conflicts_with = "title", conflicts_with = "authors")]
+        isbn: Option<String>,
         #[structopt(short, long, help = "Keywords for the book")]
         keywords: Vec<String>,
     },

@@ -42,7 +42,15 @@ impl Library {
                 title,
                 authors,
                 keywords,
-            } => self.store(file, title, authors, keywords),
+                isbn,
+            } => {
+                let (title, authors) = match (isbn, title) {
+                    (Some(isbn), None) => get_info(&isbn)?,
+                    (None, Some(title)) => (title, authors),
+                    _ => unreachable!(),
+                };
+                self.store(file, title, authors, keywords)
+            }
             Command::Search { title } => self.search(title),
 
             Command::Open { id } => self.open(id),
@@ -78,14 +86,23 @@ impl Library {
             extension,
         };
 
+        let book_json =
+            serde_json::to_string_pretty(&book).context("Could not serialize book as JSON")?;
+
         ensure!(
             self.books.insert(hash, book).is_none(),
             "Book is already in the library"
         );
 
-        copy(file, path)
-            .map(|_| ())
-            .context("Could not copy file to library")
+        copy(file, path).context("Could not copy file to library")?;
+
+        println!(
+            "Added book: {}\n with ID: {}",
+            book_json,
+            serde_json::to_string(&hash).context("Could not serialize book hash")?
+        );
+
+        Ok(())
     }
 
     fn search(&self, title: String) -> Result<()> {
@@ -123,4 +140,44 @@ impl Library {
         path += extension.to_str();
         self.root.join(path)
     }
+}
+
+fn get_info(isbn: &str) -> Result<(String, Vec<String>)> {
+    let isbn = format!(
+        "ISBN:{}",
+        isbn.chars().filter(|&c| c != '-').collect::<String>()
+    );
+    let resp = ureq::get("https://openlibrary.org/api/books")
+        .query("bibkeys", &isbn)
+        .query("jscmd", "data")
+        .query("format", "json")
+        .call()
+        .into_reader();
+    let resp = serde_json::from_reader::<_, serde_json::Value>(resp)
+        .context("Could not deserialize book info from API")?
+        .get(&isbn)
+        .ok_or_else(|| anyhow!("Book with {} not found at Open Library", &isbn))?
+        .clone();
+    let title = resp
+        .get("title")
+        .expect("bug: unexpected JSON structure")
+        .as_str()
+        .expect("bug: unexpected JSON structure")
+        .to_owned();
+    let authors = resp
+        .get("authors")
+        .expect("bug: unexpected JSON structure")
+        .as_array()
+        .expect("bug: unexpected JSON structure")
+        .into_iter()
+        .map(|j| {
+            j.get("name")
+                .expect("bug: unexpected JSON structure")
+                .as_str()
+                .expect("bug: unexpected JSON structure")
+                .to_owned()
+        })
+        .collect();
+
+    Ok((title, authors))
 }

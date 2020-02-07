@@ -1,3 +1,4 @@
+use anyhow::{bail, Result};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -17,14 +18,14 @@ pub enum Extension {
 }
 
 impl Extension {
-    pub fn from_str(s: &str) -> Self {
-        match s.to_lowercase().as_str() {
+    pub fn from_str(s: &str) -> Result<Self> {
+        Ok(match s.to_lowercase().as_str() {
             "pdf" => Self::Pdf,
             "mobi" => Self::Mobi,
             "epub" => Self::Epub,
             "djvu" => Self::Djvu,
-            _ => panic!("invalid extension {}", s),
-        }
+            _ => bail!("invalid extension {}", s),
+        })
     }
 
     pub fn to_str(&self) -> &str {
@@ -37,7 +38,7 @@ impl Extension {
     }
 }
 
-#[derive(Ord, PartialOrd, Eq, PartialEq)]
+#[derive(Ord, PartialOrd, Eq, PartialEq, Clone, Copy)]
 pub struct BookHash([u8; 16]);
 
 impl From<[u8; 16]> for BookHash {

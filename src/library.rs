@@ -1,5 +1,7 @@
 use anyhow::{anyhow, ensure, Context, Result};
 use serde::{Deserialize, Serialize};
+use fuzzy_matcher::FuzzyMatcher;
+use fuzzy_matcher::skim::SkimMatcherV2;
 
 use std::collections::BTreeMap;
 use std::fs::{copy, read, File};
@@ -105,18 +107,26 @@ impl Library {
     }
 
     fn find(&self, title: String) -> Result<()> {
-        let title = title.to_lowercase();
-        let books: Vec<_> = self
+        let matcher = SkimMatcherV2::default();
+        let mut scores = BTreeMap::new();
+        let mut books: Vec<_> = self
             .books
             .iter()
-            .filter(|(_, book)| book.title.to_lowercase().contains(&title))
+            .filter_map(|(hash, book)| {
+                let score = matcher.fuzzy_match(&book.title, &title)?;
+                scores.insert(hash, score);
+                Some((hash, book))
+            })
             .collect();
+
+        books.sort_by_key(|(hash, _)| scores[hash]);
 
         println!(
             "{}",
             serde_json::to_string_pretty(&books)
                 .context("Could not serialize search results as JSON")?
         );
+
         Ok(())
     }
 

@@ -14,23 +14,22 @@ than one application to do it. Then I wrote this small app to handle it instead.
 - Librarian keeps an index with all your documents' metadata at
   `~/.library/index.json`.
 
-- When you store a document using `librarian store`, the file is copied to the
+- When you store a document using `lbr store`, the file is copied to the
   `~/.library` folder and the metadata is added to the index file. Each
   document is indexed using the hash of the file. Additionally you can provide
   the ISBN of the document if it has one and Librarian will try to recover its
   metadata from Open Library.
 
-- Then you can search in your library using `librarian find`.
+- Then you can search in your library using `lbr find`.
 
-- Once you found the document, you can open it using `librarian open` with the
+- Once you found the document, you can open it using `lbr open` with the
   document's hash. This is equivalent to using `open` or `xdg-open`.
 
-For more help, run `librarian help`.
+For more help, run `lbr help`.
 
 ## Installation
 
-Clone this repository, build it using `cargo build --release` and put the
-binary in your `$PATH`.
+Use `cargo install`.
 
 ## Stability
 

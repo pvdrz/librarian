@@ -79,9 +79,7 @@ impl Library {
             .ok_or_else(|| anyhow!("Extension is not valid unicode"))?
             .to_lowercase();
 
-        let hash: BookHash = md5::compute(read(&file).context("Could not read file")?)
-            .0
-            .into();
+        let hash: BookHash = blake3::hash(&read(&file).context("Could not read file")?).into();
 
         let path = self.path(hash, &extension);
 
@@ -136,7 +134,7 @@ impl Library {
     }
 
     fn open(&self, hash_str: String) -> Result<()> {
-        let mut hash = [0; 16];
+        let mut hash = [0; 32];
         hex::decode_to_slice(&hash_str, &mut hash).context("Invalid Hash length")?;
         let hash = hash.into();
         let book = self
@@ -148,7 +146,7 @@ impl Library {
     }
 
     fn add(&mut self, hash_str: String, authors: Vec<String>, keywords: Vec<String>) -> Result<()> {
-        let mut hash = [0; 16];
+        let mut hash = [0; 32];
         hex::decode_to_slice(&hash_str, &mut hash).context("Invalid Hash length")?;
         let hash = hash.into();
 
@@ -175,7 +173,7 @@ impl Library {
     }
 
     fn path(&self, hash: BookHash, extension: &str) -> PathBuf {
-        let mut path = hex::encode(&<[u8; 16]>::from(hash));
+        let mut path = hex::encode(&<[u8; 32]>::from(hash));
         path += ".";
         path += extension;
         self.root.join(path)

@@ -11,15 +11,21 @@ pub struct Book {
 }
 
 #[derive(Ord, PartialOrd, Eq, PartialEq, Clone, Copy)]
-pub struct BookHash([u8; 16]);
+pub struct BookHash([u8; 32]);
 
-impl From<[u8; 16]> for BookHash {
-    fn from(bytes: [u8; 16]) -> Self {
+impl From<[u8; 32]> for BookHash {
+    fn from(bytes: [u8; 32]) -> Self {
         BookHash(bytes)
     }
 }
 
-impl From<BookHash> for [u8; 16] {
+impl From<blake3::Hash> for BookHash {
+    fn from(hash: blake3::Hash) -> Self {
+        BookHash(hash.into())
+    }
+}
+
+impl From<BookHash> for [u8; 32] {
     fn from(hash: BookHash) -> Self {
         hash.0
     }
@@ -42,7 +48,7 @@ impl<'de> Deserialize<'de> for BookHash {
     {
         use serde::de::Error;
         let s: String = Deserialize::deserialize(deserializer)?;
-        let mut bytes = [0; 16];
+        let mut bytes = [0; 32];
         hex::decode_to_slice(s, &mut bytes).map_err(D::Error::custom)?;
         Ok(BookHash(bytes))
     }

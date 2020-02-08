@@ -1,4 +1,4 @@
-use anyhow::{anyhow, ensure, Context, Result};
+use anyhow::{anyhow, bail, ensure, Context, Result};
 use fuzzy_matcher::skim::SkimMatcherV2;
 use fuzzy_matcher::FuzzyMatcher;
 use serde::{Deserialize, Serialize};
@@ -17,6 +17,55 @@ pub struct Library {
 }
 
 impl Library {
+    pub fn get_hash(&self, hash_str: &str) -> Result<BookHash> {
+        let str_len = hash_str.len();
+
+        if str_len < 64 {
+            use std::ops::Bound::Included;
+            let mut bot_hash = [0; 32];
+            let mut top_hash = [255; 32];
+
+            let mut hash_len = (str_len) / 2;
+            if str_len % 2 == 0 {
+                hex::decode_to_slice(&hash_str, &mut top_hash[..hash_len])
+            } else {
+                hash_len = (1 + str_len) / 2;
+                let b = &mut top_hash[hash_len - 1];
+                *b = b.wrapping_sub(15);
+                hex::decode_to_slice(&(hash_str.to_owned() + "f"), &mut top_hash[..hash_len])
+            }
+            .context("Invalid hash")?;
+
+            for i in 0..hash_len {
+                bot_hash[i] += top_hash[i];
+            }
+
+            let mut range = self.books.range((
+                Included(BookHash::from(bot_hash)),
+                Included(BookHash::from(top_hash)),
+            ));
+
+            if let Some((&hash, _)) = range.next() {
+                ensure!(
+                    range.next().is_none(),
+                    "Hash collision, please use a longer prefix"
+                );
+                Ok(hash)
+            } else {
+                bail!("Hash not found")
+            }
+
+        } else if str_len == 64 {
+            let mut hash = [0; 32];
+            hex::decode_to_slice(&hash_str, &mut hash).context("Invalid hash")?;
+            let hash = BookHash::from(hash);
+            ensure!(self.books.contains_key(&hash), "Hash not found");
+            Ok(hash)
+        } else {
+            bail!("Hash is longer than expected")
+        }
+    }
+
     pub fn with_root(root: PathBuf) -> Self {
         Library {
             books: BTreeMap::new(),
@@ -60,7 +109,7 @@ impl Library {
                 authors,
                 keywords,
             } => self.add(hash, authors, keywords),
-            Command::List => self.find("".to_owned()),
+            Command::List => self.list(),
         }
     }
 
@@ -109,6 +158,16 @@ impl Library {
         Ok(())
     }
 
+    fn list(&self) -> Result<()> {
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&self.books)
+                .context("Could not serialize search results as JSON")?
+        );
+
+        Ok(())
+    }
+
     fn find(&self, pattern: String) -> Result<()> {
         let matcher = SkimMatcherV2::default();
         let mut scores = BTreeMap::new();
@@ -143,9 +202,7 @@ impl Library {
     }
 
     fn open(&self, hash_str: String) -> Result<()> {
-        let mut hash = [0; 32];
-        hex::decode_to_slice(&hash_str, &mut hash).context("Invalid Hash length")?;
-        let hash = hash.into();
+        let hash = self.get_hash(&hash_str)?;
         let book = self
             .books
             .get(&hash)
@@ -155,9 +212,7 @@ impl Library {
     }
 
     fn add(&mut self, hash_str: String, authors: Vec<String>, keywords: Vec<String>) -> Result<()> {
-        let mut hash = [0; 32];
-        hex::decode_to_slice(&hash_str, &mut hash).context("Invalid Hash length")?;
-        let hash = hash.into();
+        let hash = self.get_hash(&hash_str)?;
 
         let book = self
             .books
@@ -192,7 +247,9 @@ impl Library {
 fn get_info(isbn: &str) -> Result<(String, Vec<String>)> {
     let isbn = format!(
         "ISBN:{}",
-        isbn.chars().filter(|&c| c.is_numeric() || c == 'X').collect::<String>()
+        isbn.chars()
+            .filter(|&c| c.is_numeric() || c == 'X')
+            .collect::<String>()
     );
     let resp = ureq::get("https://openlibrary.org/api/books")
         .query("bibkeys", &isbn)

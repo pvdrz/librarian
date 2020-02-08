@@ -25,6 +25,9 @@ than one application to do it. Then I wrote this small app to handle it instead.
 - Once you found the document, you can open it using `lbr open` with the
   document's hash. This is equivalent to using `open` or `xdg-open`.
 
+- If you need to change the information of a document, use `lbr update` or `lbr
+  update-add`.
+
 For more help, run `lbr help`.
 
 ## Installation

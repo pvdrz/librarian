@@ -54,7 +54,6 @@ impl Library {
             } else {
                 bail!("Hash not found")
             }
-
         } else if str_len == 64 {
             let mut hash = [0; 32];
             hex::decode_to_slice(&hash_str, &mut hash).context("Invalid hash")?;
@@ -104,11 +103,17 @@ impl Library {
             }
             Command::Find { pattern } => self.find(pattern),
             Command::Open { hash } => self.open(hash),
-            Command::Add {
+            Command::UpdateAdd {
                 hash,
                 authors,
                 keywords,
-            } => self.add(hash, authors, keywords),
+            } => self.update_add(hash, authors, keywords),
+            Command::Update {
+                hash,
+                title,
+                authors,
+                keywords,
+            } => self.update(hash, title, authors, keywords),
             Command::List => self.list(),
         }
     }
@@ -211,7 +216,12 @@ impl Library {
         Ok(())
     }
 
-    fn add(&mut self, hash_str: String, authors: Vec<String>, keywords: Vec<String>) -> Result<()> {
+    fn update_add(
+        &mut self,
+        hash_str: String,
+        authors: Vec<String>,
+        keywords: Vec<String>,
+    ) -> Result<()> {
         let hash = self.get_hash(&hash_str)?;
 
         let book = self
@@ -225,6 +235,41 @@ impl Library {
 
         for keyword in keywords {
             book.keywords.insert(keyword);
+        }
+
+        println!(
+            "Updated book {}: {}",
+            hash_str,
+            serde_json::to_string_pretty(&book).context("Could not serialize book as JSON")?
+        );
+
+        Ok(())
+    }
+
+    fn update(
+        &mut self,
+        hash_str: String,
+        title: Option<String>,
+        authors: Option<Vec<String>>,
+        keywords: Option<Vec<String>>,
+    ) -> Result<()> {
+        let hash = self.get_hash(&hash_str)?;
+
+        let book = self
+            .books
+            .get_mut(&hash)
+            .ok_or_else(|| anyhow!("Document with hash {} not found", hash_str))?;
+
+        if let Some(title) = title {
+            book.title = title;
+        }
+
+        if let Some(authors) = authors {
+            book.authors = authors.into_iter().collect();
+        }
+
+        if let Some(keywords) = keywords {
+            book.keywords = keywords.into_iter().collect();
         }
 
         println!(

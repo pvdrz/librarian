@@ -32,7 +32,7 @@ For more help, run `lbr help`.
 
 ## Installation
 
-Use `cargo install`.
+Clone this repository and run `cargo install --path <path-to-repo>`.
 
 ## Stability
 
@@ -44,4 +44,4 @@ can rest assured that the next update of Librarian won't mess up your index.
 ## Contributions
 
 Please do! I'm more than happy to receive suggestions, questions, issues, PRs
-and so.
+and so on.

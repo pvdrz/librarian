@@ -1,11 +1,13 @@
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
+use std::collections::BTreeSet;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Book {
     pub title: String,
-    pub authors: Vec<String>,
+    pub authors: BTreeSet<String>,
     pub extension: String,
-    pub keywords: Vec<String>,
+    pub keywords: BTreeSet<String>,
 }
 
 #[derive(Ord, PartialOrd, Eq, PartialEq, Clone, Copy)]

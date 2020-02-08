@@ -46,15 +46,15 @@ pub enum Command {
     //     #[structopt(short, long, help = "New list of Keywords for the document")]
     //     keywords: Vec<String>,
     // },
-    // #[structopt(about = "Extends the authors/keywords list of a document")]
-    // Add {
-    //     #[structopt(help = "Hash of the document to be updated")]
-    //     hash: String,
-    //     #[structopt(short, long, help = "Authors to be added to the document")]
-    //     authors: Vec<String>,
-    //     #[structopt(short, long, help = "Keywords to be added to the document")]
-    //     keywords: Vec<String>,
-    // },
+    #[structopt(about = "Extends the authors/keywords list of a document")]
+    Add {
+        #[structopt(help = "Hash of the document to be updated")]
+        hash: String,
+        #[structopt(short, long, help = "Authors to be added to the document")]
+        authors: Vec<String>,
+        #[structopt(short, long, help = "Keywords to be added to the document")]
+        keywords: Vec<String>,
+    },
     #[structopt(about = "Open a document")]
     Open {
         #[structopt(help = "Hash of the document to be opened")]

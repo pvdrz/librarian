@@ -1,7 +1,7 @@
 use anyhow::{anyhow, ensure, Context, Result};
-use serde::{Deserialize, Serialize};
-use fuzzy_matcher::FuzzyMatcher;
 use fuzzy_matcher::skim::SkimMatcherV2;
+use fuzzy_matcher::FuzzyMatcher;
+use serde::{Deserialize, Serialize};
 
 use std::collections::BTreeMap;
 use std::fs::{copy, read, File};
@@ -55,6 +55,11 @@ impl Library {
             }
             Command::Find { title } => self.find(title),
             Command::Open { hash } => self.open(hash),
+            Command::Add {
+                hash,
+                authors,
+                keywords,
+            } => self.add(hash, authors, keywords),
             Command::List => self.find("".to_owned()),
         }
     }
@@ -82,8 +87,8 @@ impl Library {
 
         let book = Book {
             title,
-            authors,
-            keywords,
+            authors: authors.into_iter().collect(),
+            keywords: keywords.into_iter().collect(),
             extension,
         };
 
@@ -92,7 +97,7 @@ impl Library {
 
         ensure!(
             self.books.insert(hash, book).is_none(),
-            "Book is already in the library"
+            "Document is already in the library"
         );
 
         copy(file, path).context("Could not copy file to library")?;
@@ -132,14 +137,40 @@ impl Library {
 
     fn open(&self, hash_str: String) -> Result<()> {
         let mut hash = [0; 16];
-        hex::decode_to_slice(&hash_str, &mut hash)
-            .expect("bug: hash could not be decoded in 16 bytes array");
+        hex::decode_to_slice(&hash_str, &mut hash).context("Invalid Hash length")?;
         let hash = hash.into();
         let book = self
             .books
             .get(&hash)
-            .ok_or_else(|| anyhow!("Book with hash {} not found", hash_str))?;
+            .ok_or_else(|| anyhow!("Document with hash {} not found", hash_str))?;
         open::that(self.path(hash, &book.extension)).context("Could not open document")?;
+        Ok(())
+    }
+
+    fn add(&mut self, hash_str: String, authors: Vec<String>, keywords: Vec<String>) -> Result<()> {
+        let mut hash = [0; 16];
+        hex::decode_to_slice(&hash_str, &mut hash).context("Invalid Hash length")?;
+        let hash = hash.into();
+
+        let book = self
+            .books
+            .get_mut(&hash)
+            .ok_or_else(|| anyhow!("Document with hash {} not found", hash_str))?;
+
+        for author in authors {
+            book.authors.insert(author);
+        }
+
+        for keyword in keywords {
+            book.keywords.insert(keyword);
+        }
+
+        println!(
+            "Updated book {}: {}",
+            hash_str,
+            serde_json::to_string_pretty(&book).context("Could not serialize book as JSON")?
+        );
+
         Ok(())
     }
 
@@ -165,7 +196,7 @@ fn get_info(isbn: &str) -> Result<(String, Vec<String>)> {
     let resp = serde_json::from_reader::<_, serde_json::Value>(resp)
         .context("Could not deserialize document information from the API")?
         .get(&isbn)
-        .ok_or_else(|| anyhow!("Book with {} not found at Open Library", &isbn))?
+        .ok_or_else(|| anyhow!("Document with {} not found at Open Library", &isbn))?
         .clone();
     let title = resp
         .get("title")

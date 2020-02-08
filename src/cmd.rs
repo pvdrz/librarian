@@ -26,12 +26,8 @@ pub enum Command {
     },
     #[structopt(about = "Find a document in the library")]
     Find {
-        #[structopt(short, long, help = "Title of the document")]
-        title: String,
-        // #[structopt(short, long, help = "Authors of the document")]
-        // authors: Vec<String>,
-        // #[structopt(short, long, help = "Keywords for the document")]
-        // keywords: Vec<String>,
+        #[structopt(help = "Pattern to search in the document information")]
+        pattern: String,
     },
     #[structopt(about = "List all the documents in the library")]
     List,

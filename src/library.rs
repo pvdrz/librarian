@@ -53,7 +53,7 @@ impl Library {
                 };
                 self.store(file, title, authors, keywords)
             }
-            Command::Find { title } => self.find(title),
+            Command::Find { pattern } => self.find(pattern),
             Command::Open { hash } => self.open(hash),
             Command::Add {
                 hash,
@@ -109,15 +109,24 @@ impl Library {
         Ok(())
     }
 
-    fn find(&self, title: String) -> Result<()> {
+    fn find(&self, pattern: String) -> Result<()> {
         let matcher = SkimMatcherV2::default();
         let mut scores = BTreeMap::new();
         let mut books: Vec<_> = self
             .books
             .iter()
             .filter_map(|(hash, book)| {
-                let score = matcher.fuzzy_match(&book.title, &title)?;
-                scores.insert(hash, score);
+                let mut score = matcher.fuzzy_match(&book.title, &pattern).unwrap_or(0);
+                for author in &book.authors {
+                    score += matcher.fuzzy_match(author, &pattern).unwrap_or(0);
+                }
+                for keyword in &book.keywords {
+                    score += matcher.fuzzy_match(keyword, &pattern).unwrap_or(0);
+                }
+                if score == 0 {
+                    return None;
+                }
+                scores.insert(hash, -(score as isize));
                 Some((hash, book))
             })
             .collect();

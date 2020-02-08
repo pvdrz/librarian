@@ -183,7 +183,7 @@ impl Library {
 fn get_info(isbn: &str) -> Result<(String, Vec<String>)> {
     let isbn = format!(
         "ISBN:{}",
-        isbn.chars().filter(|&c| c != '-').collect::<String>()
+        isbn.chars().filter(|&c| c.is_numeric() || c == 'X').collect::<String>()
     );
     let resp = ureq::get("https://openlibrary.org/api/books")
         .query("bibkeys", &isbn)

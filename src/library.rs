@@ -3,7 +3,7 @@ use fuzzy_matcher::skim::SkimMatcherV2;
 use fuzzy_matcher::FuzzyMatcher;
 use serde::{Deserialize, Serialize};
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs::{copy, read, File};
 use std::path::{Path, PathBuf};
 
@@ -87,45 +87,26 @@ impl Library {
 
     pub fn run_command(&mut self, cmd: Command) -> Result<()> {
         match cmd {
-            Command::Store {
-                file,
-                title,
-                authors,
-                keywords,
-                isbn,
-            } => {
-                let (title, authors) = match (isbn, title) {
-                    (Some(isbn), None) => get_info(&isbn)?,
-                    (None, Some(title)) => (title, authors),
-                    _ => unreachable!(),
-                };
-                self.store(file, title, authors, keywords)
-            }
+            Command::Add { file, isbn } => self.add(file, isbn),
             Command::Find { pattern } => self.find(pattern),
             Command::Open { hash } => self.open(hash),
-            Command::UpdateAdd {
-                hash,
-                authors,
-                keywords,
-            } => self.update_add(hash, authors, keywords),
-            Command::Update {
-                hash,
-                title,
-                authors,
-                keywords,
-            } => self.update(hash, title, authors, keywords),
+            Command::Edit { hash } => self.edit(hash),
             Command::List => self.list(),
         }
     }
 
-    fn store(
-        &mut self,
-        file: String,
-        title: String,
-        authors: Vec<String>,
-        keywords: Vec<String>,
-    ) -> Result<()> {
+    fn add(&mut self, file: String, isbn: Option<String>) -> Result<()> {
         let file = PathBuf::from(file);
+
+        let hash: BookHash = blake3::hash(&read(&file).context("Could not read file")?).into();
+
+        if self.books.contains_key(&hash) {
+            bail!(
+                "Document with hash {} already exists",
+                serde_json::to_string(&hash).unwrap()
+            );
+        }
+
         let extension = file
             .extension()
             .ok_or_else(|| anyhow!("File {:?} has no extension", file))?
@@ -133,31 +114,29 @@ impl Library {
             .ok_or_else(|| anyhow!("Extension is not valid unicode"))?
             .to_lowercase();
 
-        let hash: BookHash = blake3::hash(&read(&file).context("Could not read file")?).into();
-
         let path = self.path(hash, &extension);
 
-        let book = Book {
-            title,
-            authors: authors.into_iter().collect(),
-            keywords: keywords.into_iter().collect(),
+        let mut book = Book {
+            title: String::new(),
+            authors: BTreeSet::new(),
+            keywords: BTreeSet::new(),
             extension,
         };
 
-        let book_json = serde_json::to_string_pretty(&book)
-            .context("Could not serialize document information as JSON")?;
+        if let Some(isbn) = isbn {
+            book.set_info_from_api(&isbn)?;
+        }
 
-        ensure!(
-            self.books.insert(hash, book).is_none(),
-            "Document is already in the library"
-        );
+        let book_json = book.edit()?;
+
+        assert!(self.books.insert(hash, book).is_none(),);
 
         copy(file, path).context("Could not copy file to library")?;
 
         println!(
             "Added document: {}\n with hash: {}",
             book_json,
-            serde_json::to_string(&hash).context("Could not serialize document hash")?
+            serde_json::to_string(&hash).expect("Bug: Could not serialize document hash")
         );
 
         Ok(())
@@ -167,7 +146,7 @@ impl Library {
         println!(
             "{}",
             serde_json::to_string_pretty(&self.books)
-                .context("Could not serialize search results as JSON")?
+                .expect("Bug: Could not serialize list of documents as JSON")
         );
 
         Ok(())
@@ -200,7 +179,7 @@ impl Library {
         println!(
             "{}",
             serde_json::to_string_pretty(&books)
-                .context("Could not serialize search results as JSON")?
+                .expect("Bug: Could not serialize search results as JSON")
         );
 
         Ok(())
@@ -216,12 +195,7 @@ impl Library {
         Ok(())
     }
 
-    fn update_add(
-        &mut self,
-        hash_str: String,
-        authors: Vec<String>,
-        keywords: Vec<String>,
-    ) -> Result<()> {
+    fn edit(&mut self, hash_str: String) -> Result<()> {
         let hash = self.get_hash(&hash_str)?;
 
         let book = self
@@ -229,54 +203,9 @@ impl Library {
             .get_mut(&hash)
             .ok_or_else(|| anyhow!("Document with hash {} not found", hash_str))?;
 
-        for author in authors {
-            book.authors.insert(author);
-        }
+        let book_json = book.edit()?;
 
-        for keyword in keywords {
-            book.keywords.insert(keyword);
-        }
-
-        println!(
-            "Updated book {}: {}",
-            hash_str,
-            serde_json::to_string_pretty(&book).context("Could not serialize book as JSON")?
-        );
-
-        Ok(())
-    }
-
-    fn update(
-        &mut self,
-        hash_str: String,
-        title: Option<String>,
-        authors: Option<Vec<String>>,
-        keywords: Option<Vec<String>>,
-    ) -> Result<()> {
-        let hash = self.get_hash(&hash_str)?;
-
-        let book = self
-            .books
-            .get_mut(&hash)
-            .ok_or_else(|| anyhow!("Document with hash {} not found", hash_str))?;
-
-        if let Some(title) = title {
-            book.title = title;
-        }
-
-        if let Some(authors) = authors {
-            book.authors = authors.into_iter().collect();
-        }
-
-        if let Some(keywords) = keywords {
-            book.keywords = keywords.into_iter().collect();
-        }
-
-        println!(
-            "Updated book {}: {}",
-            hash_str,
-            serde_json::to_string_pretty(&book).context("Could not serialize book as JSON")?
-        );
+        println!("Updated document {}: {}", hash_str, book_json,);
 
         Ok(())
     }
@@ -287,46 +216,4 @@ impl Library {
         path += extension;
         self.root.join(path)
     }
-}
-
-fn get_info(isbn: &str) -> Result<(String, Vec<String>)> {
-    let isbn = format!(
-        "ISBN:{}",
-        isbn.chars()
-            .filter(|&c| c.is_numeric() || c == 'X')
-            .collect::<String>()
-    );
-    let resp = ureq::get("https://openlibrary.org/api/books")
-        .query("bibkeys", &isbn)
-        .query("jscmd", "data")
-        .query("format", "json")
-        .call()
-        .into_reader();
-    let resp = serde_json::from_reader::<_, serde_json::Value>(resp)
-        .context("Could not deserialize document information from the API")?
-        .get(&isbn)
-        .ok_or_else(|| anyhow!("Document with {} not found at Open Library", &isbn))?
-        .clone();
-    let title = resp
-        .get("title")
-        .expect("bug: unexpected JSON structure")
-        .as_str()
-        .expect("bug: unexpected JSON structure")
-        .to_owned();
-    let authors = resp
-        .get("authors")
-        .expect("bug: unexpected JSON structure")
-        .as_array()
-        .expect("bug: unexpected JSON structure")
-        .into_iter()
-        .map(|j| {
-            j.get("name")
-                .expect("bug: unexpected JSON structure")
-                .as_str()
-                .expect("bug: unexpected JSON structure")
-                .to_owned()
-        })
-        .collect();
-
-    Ok((title, authors))
 }

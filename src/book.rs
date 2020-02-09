@@ -1,3 +1,4 @@
+use anyhow::{anyhow, Context, Result};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use std::collections::BTreeSet;
@@ -10,6 +11,67 @@ pub struct Book {
     pub keywords: BTreeSet<String>,
 }
 
+impl Book {
+    pub fn set_info_from_api(&mut self, isbn: &str) -> Result<()> {
+        let isbn = format!(
+            "ISBN:{}",
+            isbn.chars()
+                .filter(|&c| c.is_numeric() || c == 'X')
+                .collect::<String>()
+        );
+
+        let resp = ureq::get("https://openlibrary.org/api/books")
+            .query("bibkeys", &isbn)
+            .query("jscmd", "data")
+            .query("format", "json")
+            .call()
+            .into_reader();
+
+        let resp = serde_json::from_reader::<_, serde_json::Value>(resp)
+            .context("Could not deserialize document information from the API")?
+            .get(&isbn)
+            .ok_or_else(|| anyhow!("Document with {} not found at Open Library", &isbn))?
+            .clone();
+
+        self.title = resp
+            .get("title")
+            .map(|value| {
+                value
+                    .as_str()
+                    .expect("Malformed response from API, title is not a string")
+                    .to_owned()
+            })
+            .unwrap_or_else(|| String::new());
+
+        self.authors = resp
+            .get("authors")
+            .map(|value| {
+                value
+                    .as_array()
+                    .expect("Malformed response from API, authors are not an array")
+                    .into_iter()
+                    .map(|j| {
+                        j.get("name")
+                            .expect("Malformed response from API: author does not have a name")
+                            .as_str()
+                            .expect("Malformed response from API: author's name is not a string")
+                            .to_owned()
+                    })
+                    .collect()
+            })
+            .unwrap_or_else(|| BTreeSet::new());
+
+        Ok(())
+    }
+
+    pub fn edit(&mut self) -> Result<String> {
+        let text =
+            serde_json::to_string_pretty(&self).context("cannot serialize document to JSON")?;
+        let text = scrawl::with(&text)?;
+        *self = serde_json::from_str(&text).context("cannot deserialize document from JSON")?;
+        Ok(text)
+    }
+}
 #[derive(Ord, PartialOrd, Eq, PartialEq, Clone, Copy)]
 pub struct BookHash([u8; 32]);
 

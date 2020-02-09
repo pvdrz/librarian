@@ -14,7 +14,7 @@ than one application to do it. Then I wrote this small app to handle it instead.
 - Librarian keeps an index with all your documents' metadata at
   `~/.library/index.json`.
 
-- When you store a document using `lbr store`, the file is copied to the
+- When you store a document using `lbr add`, the file is copied to the
   `~/.library` folder and the metadata is added to the index file. Each
   document is indexed using the hash of the file. Additionally you can provide
   the ISBN of the document if it has one and Librarian will try to recover its
@@ -25,8 +25,8 @@ than one application to do it. Then I wrote this small app to handle it instead.
 - Once you found the document, you can open it using `lbr open` with the
   document's hash. This is equivalent to using `open` or `xdg-open`.
 
-- If you need to change the information of a document, use `lbr update` or `lbr
-  update-add`.
+- If you need to change the information of a document, use `lbr edit` to open
+  the information as a JSON using your default text editor.
 
 For more help, run `lbr help`.
 

@@ -88,7 +88,7 @@ impl Library {
     pub fn run_command(&mut self, cmd: Command) -> Result<()> {
         match cmd {
             Command::Add { file, isbn } => self.add(file, isbn),
-            Command::Find { pattern } => self.find(pattern),
+            Command::Find { pattern, open } => self.find(pattern, open),
             Command::Open { hash } => self.open(hash),
             Command::Edit { hash } => self.edit(hash),
             Command::List => self.list(),
@@ -152,7 +152,7 @@ impl Library {
         Ok(())
     }
 
-    fn find(&self, pattern: String) -> Result<()> {
+    fn find(&self, pattern: String, open: bool) -> Result<()> {
         let matcher = SkimMatcherV2::default();
         let mut scores = BTreeMap::new();
         let mut books: Vec<_> = self
@@ -176,11 +176,19 @@ impl Library {
 
         books.sort_by_key(|(hash, _)| scores[hash]);
 
-        println!(
-            "{}",
-            serde_json::to_string_pretty(&books)
-                .expect("Bug: Could not serialize search results as JSON")
-        );
+        if open {
+            if let Some(&(&hash, book)) = books.get(0) {
+                open::that(self.path(hash, &book.extension)).context("Could not open document")?;
+            } else {
+                bail!("Search did not return any results");
+            }
+        } else {
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&books)
+                    .expect("Bug: Could not serialize search results as JSON")
+            );
+        }
 
         Ok(())
     }

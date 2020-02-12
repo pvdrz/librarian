@@ -20,6 +20,8 @@ pub enum Command {
     Find {
         #[structopt(help = "Pattern to search in the document information")]
         pattern: String,
+        #[structopt(short, long, help = "Opens the first match of the search")]
+        open: bool,
     },
     #[structopt(about = "List all the documents in the library")]
     List,

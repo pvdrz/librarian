@@ -143,12 +143,7 @@ impl Library {
     }
 
     fn list(&self) -> Result<()> {
-        println!(
-            "{}",
-            serde_json::to_string_pretty(&self.books)
-                .expect("Bug: Could not serialize list of documents as JSON")
-        );
-
+        show_json(&self.books);
         Ok(())
     }
 
@@ -178,16 +173,13 @@ impl Library {
 
         if open {
             if let Some(&(&hash, book)) = books.get(0) {
+                println!("Opening book {}", serde_json::to_string(&hash).unwrap());
                 open::that(self.path(hash, &book.extension)).context("Could not open document")?;
             } else {
                 bail!("Search did not return any results");
             }
         } else {
-            println!(
-                "{}",
-                serde_json::to_string_pretty(&books)
-                    .expect("Bug: Could not serialize search results as JSON")
-            );
+            show_json(&books);
         }
 
         Ok(())
@@ -213,7 +205,7 @@ impl Library {
 
         let book_json = book.edit()?;
 
-        println!("Updated document {}: {}", hash_str, book_json,);
+        println!("Updated document {}: {}", hash_str, book_json);
 
         Ok(())
     }
@@ -224,4 +216,12 @@ impl Library {
         path += extension;
         self.root.join(path)
     }
+}
+
+fn show_json<S: Serialize>(s: &S) {
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&s)
+            .expect("Bug: Could not serialize list of documents as JSON")
+    );
 }

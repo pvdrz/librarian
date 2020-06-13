@@ -1,28 +1,68 @@
+use std::array::LengthAtMost32;
 use std::collections::HashMap;
+use std::convert::TryFrom;
 
 use crate::DocId;
 
-pub struct Index {
-    n: usize,
-    grams: HashMap<Vec<u8>, Vec<DocId>>,
+#[derive(Default)]
+pub struct Index<const N: usize> {
+    grams: HashMap<[u8; N], Freqs>,
+    total_docs: usize,
 }
 
-impl Index {
-    pub fn new(n: usize) -> Self {
-        Index {
-            n,
-            grams: Default::default(),
+#[derive(Default)]
+struct Freqs {
+    freqs: HashMap<DocId, usize>,
+    max_freq: usize,
+}
+
+impl Freqs {
+    fn ids(&self) -> impl Iterator<Item = &DocId> {
+        self.freqs.keys()
+    }
+
+    fn docs(&self) -> usize {
+        self.freqs.len()
+    }
+
+    fn freq(&self, id: &DocId) -> f32 {
+        let freq = self.freqs.get(id).copied().unwrap_or(0) as f32;
+        0.5 + 0.5 * freq / self.max_freq as f32
+    }
+
+    fn increase(&mut self, id: DocId) {
+        let freq = self.freqs.entry(id).or_insert(0);
+        *freq += 1;
+        if *freq > self.max_freq {
+            self.max_freq = *freq;
         }
     }
 
-    pub fn search(&self, text: &[u8]) -> HashMap<DocId, usize> {
+    fn decrease(&mut self, id: &DocId) {
+        if let Some(freq) = self.freqs.get_mut(id) {
+            if *freq == 1 {
+                self.freqs.remove(id);
+            } else {
+                *freq -= 1;
+            }
+        }
+    }
+}
+
+impl<const N: usize> Index<N>
+where
+    [u8; N]: LengthAtMost32,
+{
+    pub fn search(&self, text: &[u8]) -> HashMap<DocId, f32> {
         let mut scores = HashMap::new();
 
-        for gram in text.windows(self.n) {
-            if let Some(ids) = self.grams.get(gram) {
-                for &id in ids {
-                    let score = scores.entry(id).or_insert(0);
-                    *score += 1;
+        for gram in text.windows(N) {
+            if let Some(freqs) = self.grams.get(gram) {
+                for id in freqs.ids() {
+                    let freq = freqs.freq(id);
+                    let inv = ((self.total_docs as f32) / (freqs.docs() as f32)).ln();
+                    let score = scores.entry(id.clone()).or_insert(0.0);
+                    *score += freq * inv;
                 }
             }
         }
@@ -31,23 +71,33 @@ impl Index {
     }
 
     pub fn insert(&mut self, id: DocId, text: &[u8]) {
-        for gram in text.windows(self.n) {
-            let ids = self
-                .grams
-                .entry(gram.to_vec())
-                .or_insert_with(|| Vec::default());
-            if let Err(pos) = ids.binary_search(&id) {
-                ids.insert(pos, id);
-            }
+        for gram in text.windows(N) {
+            let gram = <[u8; N]>::try_from(gram).unwrap();
+            self.grams
+                .entry(gram)
+                .or_insert_with(|| Freqs::default())
+                .increase(id);
         }
+        self.total_docs += 1;
     }
 
-    pub fn remove(&mut self, id: DocId) {
-        for ids in self.grams.values_mut() {
-            if let Ok(pos) = ids.binary_search(&id) {
-                ids.remove(pos);
+    pub fn insert_many(&mut self, id: DocId, texts: impl Iterator<Item = Vec<u8>>) {
+        for text in texts {
+            for gram in text.windows(N) {
+                let gram = <[u8; N]>::try_from(gram).unwrap();
+                self.grams
+                    .entry(gram)
+                    .or_insert_with(|| Freqs::default())
+                    .increase(id);
             }
         }
+        self.total_docs += 1;
+    }
+
+    pub fn remove(&mut self, id: &DocId) {
+        for freqs in self.grams.values_mut() {
+            freqs.decrease(&id);
+        }
+        self.total_docs -= 1;
     }
 }
-

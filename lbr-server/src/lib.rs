@@ -1,10 +1,14 @@
+#![feature(const_generics)]
+#![feature(const_generic_impls_guard)]
+#![allow(incomplete_features)]
+
 use serde::{Deserialize, Serialize};
 
 use anyhow::{Context, Result};
 
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
 use std::fs::File;
+use std::path::{Path, PathBuf};
 
 pub mod dbus;
 mod doc;
@@ -28,8 +32,7 @@ impl Library {
         let mut library: Library =
             serde_json::from_reader(file).context("Could not deserialize index contents")?;
         for (id, doc) in &library.docs {
-            library.indices.insert(
-               * id, doc);
+            library.indices.insert(*id, doc);
         }
         Ok(library)
     }
@@ -45,7 +48,8 @@ impl Library {
 
 #[test]
 fn it_works() {
-    let mut library = Library::from_file(&PathBuf::from("/home/christian/MEGAsync/Books/index.json")).unwrap();
+    let library =
+        Library::from_file(&PathBuf::from("/home/christian/MEGAsync/Books/index.json")).unwrap();
 
     for (id, score) in library.indices.search("typ", 10) {
         println!("{:?} {}", library.docs[&id], score);

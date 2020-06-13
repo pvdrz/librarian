@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result, Context};
+use anyhow::{Context, Result};
 
 use dbus::{
     arg::Variant,
@@ -25,8 +25,8 @@ fn create_get_initial_result_set(lib: Arc<Library>) -> Method<MTFn, ()> {
     fact.method("GetInitialResultSet", (), move |m| {
         let terms: Vec<&str> = m.msg.read1()?;
 
-        let hello =
-            get_initial_result_set(Arc::clone(&lib), terms).map_err(|err| Error::new_failed(&err.to_string()))?;
+        let hello = get_initial_result_set(Arc::clone(&lib), terms)
+            .map_err(|err| Error::new_failed(&err.to_string()))?;
 
         let results = m.msg.method_return().append1(hello);
 
@@ -37,7 +37,9 @@ fn create_get_initial_result_set(lib: Arc<Library>) -> Method<MTFn, ()> {
 }
 
 fn get_initial_result_set(lib: Arc<Library>, terms: Vec<&str>) -> Result<Vec<String>> {
-    lib.search(&terms.join(" ")).map(|id| serde_json::to_string(&id).context("Could not serialize document ID")).collect()
+    lib.search(&terms.join(" "))
+        .map(|id| serde_json::to_string(&id).context("Could not serialize document ID"))
+        .collect()
 }
 
 fn create_get_subsearch_result_set(lib: Arc<Library>) -> Method<MTFn, ()> {
@@ -71,8 +73,8 @@ fn create_get_result_metas(lib: Arc<Library>) -> Method<MTFn, ()> {
     fact.method("GetResultMetas", (), move |m| {
         let identifiers: Vec<&str> = m.msg.read1()?;
 
-        let hello =
-            get_result_metas(lib.clone(), identifiers).map_err(|err| Error::new_failed(&err.to_string()))?;
+        let hello = get_result_metas(lib.clone(), identifiers)
+            .map_err(|err| Error::new_failed(&err.to_string()))?;
 
         let metas = m.msg.method_return().append1(hello);
 
@@ -82,7 +84,10 @@ fn create_get_result_metas(lib: Arc<Library>) -> Method<MTFn, ()> {
     .inarg::<Vec<&str>, _>("identifiers")
 }
 
-fn get_result_metas(lib: Arc<Library>, identifiers: Vec<&str>) -> Result<Vec<HashMap<&str, Variant<String>>>> {
+fn get_result_metas(
+    lib: Arc<Library>,
+    identifiers: Vec<&str>,
+) -> Result<Vec<HashMap<&str, Variant<String>>>> {
     identifiers
         .into_iter()
         .map(|identifier| {
@@ -90,10 +95,7 @@ fn get_result_metas(lib: Arc<Library>, identifiers: Vec<&str>) -> Result<Vec<Has
             let mut meta = HashMap::default();
             meta.insert("id", Variant(identifier.to_string()));
             meta.insert("name", Variant(doc.title.clone()));
-            meta.insert(
-                "description",
-                Variant(doc.authors[0].clone()),
-            );
+            meta.insert("description", Variant(doc.authors[0].clone()));
             Ok(meta)
         })
         .collect()

@@ -16,10 +16,11 @@ mod text;
 
 use text::Indices;
 
-use doc::{Doc, DocId};
+use doc::{deserialize_docs, Doc, DocId};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Deserialize)]
 pub struct Library {
+    #[serde(deserialize_with = "deserialize_docs")]
     docs: HashMap<DocId, Doc>,
     root: PathBuf,
     #[serde(skip)]
@@ -38,20 +39,17 @@ impl Library {
     }
 
     pub fn search(&self, text: &str) -> impl Iterator<Item = DocId> {
-        self.indices.search(text, 5).into_iter().map(|(id, _)| id)
+        self.indices.search(text, 10).into_iter().map(|(id, _)| id)
     }
 
-    pub fn get(&self, id: &DocId) -> &Doc {
-        &self.docs[id]
+    pub fn get(&self, id: DocId) -> &Doc {
+        &self.docs[&id]
     }
-}
 
-#[test]
-fn it_works() {
-    let library =
-        Library::from_file(&PathBuf::from("/home/christian/MEGAsync/Books/index.json")).unwrap();
-
-    for (id, score) in library.indices.search("typ", 10) {
-        println!("{:?} {}", library.docs[&id], score);
+    pub fn open(&self, id: DocId) -> Result<()> {
+        let name = &self.get(id).filename;
+        let path = self.root.join(name);
+        open::that(path)?;
+        Ok(())
     }
 }

@@ -1,4 +1,4 @@
-use anyhow::{Context, Result};
+use anyhow::Result;
 
 use dbus::{
     arg::Variant,
@@ -17,7 +17,8 @@ pub(super) fn create_interface(lib: Arc<Library>) -> Interface<MTFn, ()> {
     fact.interface("org.gnome.Shell.SearchProvider2", ())
         .add_m(create_get_initial_result_set(lib.clone()))
         .add_m(create_get_subsearch_result_set(lib.clone()))
-        .add_m(create_get_result_metas(lib))
+        .add_m(create_get_result_metas(lib.clone()))
+        .add_m(create_activate_result(lib))
 }
 
 fn create_get_initial_result_set(lib: Arc<Library>) -> Method<MTFn, ()> {
@@ -25,10 +26,10 @@ fn create_get_initial_result_set(lib: Arc<Library>) -> Method<MTFn, ()> {
     fact.method("GetInitialResultSet", (), move |m| {
         let terms: Vec<&str> = m.msg.read1()?;
 
-        let hello = get_initial_result_set(Arc::clone(&lib), terms)
+        let results = get_initial_result_set(Arc::clone(&lib), terms)
             .map_err(|err| Error::new_failed(&err.to_string()))?;
 
-        let results = m.msg.method_return().append1(hello);
+        let results = m.msg.method_return().append1(results);
 
         Ok(vec![results])
     })
@@ -37,9 +38,10 @@ fn create_get_initial_result_set(lib: Arc<Library>) -> Method<MTFn, ()> {
 }
 
 fn get_initial_result_set(lib: Arc<Library>, terms: Vec<&str>) -> Result<Vec<String>> {
-    lib.search(&terms.join(" "))
-        .map(|id| serde_json::to_string(&id).context("Could not serialize document ID"))
-        .collect()
+    Ok(lib
+        .search(&terms.join(" "))
+        .map(|id| id.to_string())
+        .collect())
 }
 
 fn create_get_subsearch_result_set(lib: Arc<Library>) -> Method<MTFn, ()> {
@@ -47,10 +49,10 @@ fn create_get_subsearch_result_set(lib: Arc<Library>) -> Method<MTFn, ()> {
     fact.method("GetSubsearchResultSet", (), move |m| {
         let (previous_results, terms): (Vec<&str>, Vec<&str>) = m.msg.read2()?;
 
-        let hello = get_subsearch_result_set(Arc::clone(&lib), previous_results, terms)
+        let results = get_subsearch_result_set(Arc::clone(&lib), previous_results, terms)
             .map_err(|err| Error::new_failed(&err.to_string()))?;
 
-        let results = m.msg.method_return().append1(hello);
+        let results = m.msg.method_return().append1(results);
 
         Ok(vec![results])
     })
@@ -61,7 +63,7 @@ fn create_get_subsearch_result_set(lib: Arc<Library>) -> Method<MTFn, ()> {
 
 fn get_subsearch_result_set<'a>(
     lib: Arc<Library>,
-    previous_results: Vec<&str>,
+    _previous_results: Vec<&str>,
     terms: Vec<&str>,
 ) -> Result<Vec<String>> {
     get_initial_result_set(lib, terms)
@@ -73,10 +75,10 @@ fn create_get_result_metas(lib: Arc<Library>) -> Method<MTFn, ()> {
     fact.method("GetResultMetas", (), move |m| {
         let identifiers: Vec<&str> = m.msg.read1()?;
 
-        let hello = get_result_metas(lib.clone(), identifiers)
+        let metas = get_result_metas(lib.clone(), identifiers)
             .map_err(|err| Error::new_failed(&err.to_string()))?;
 
-        let metas = m.msg.method_return().append1(hello);
+        let metas = m.msg.method_return().append1(metas);
 
         Ok(vec![metas])
     })
@@ -91,7 +93,7 @@ fn get_result_metas(
     identifiers
         .into_iter()
         .map(|identifier| {
-            let doc = lib.get(&serde_json::from_str(identifier)?);
+            let doc = lib.get(identifier.parse()?);
             let mut meta = HashMap::default();
             meta.insert("id", Variant(identifier.to_string()));
             meta.insert("name", Variant(doc.title.clone()));
@@ -99,4 +101,29 @@ fn get_result_metas(
             Ok(meta)
         })
         .collect()
+}
+
+fn create_activate_result(lib: Arc<Library>) -> Method<MTFn, ()> {
+    let fact = Factory::new_fn::<()>();
+
+    fact.method("ActivateResult", (), move |m| {
+        let (identifier, terms, timestamp): (&str, Vec<&str>, u32) = m.msg.read3()?;
+
+        activate_result(lib.clone(), identifier, terms, timestamp)
+            .map_err(|err| Error::new_failed(&err.to_string()))?;
+
+        Ok(vec![])
+    })
+    .inarg::<&str, _>("identifier")
+    .inarg::<Vec<&str>, _>("terms")
+    .inarg::<u32, _>("timestamp")
+}
+
+fn activate_result(
+    lib: Arc<Library>,
+    identifier: &str,
+    _terms: Vec<&str>,
+    _timestamp: u32,
+) -> Result<()> {
+    lib.open(identifier.parse()?)
 }

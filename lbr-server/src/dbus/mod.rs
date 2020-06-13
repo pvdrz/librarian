@@ -2,8 +2,8 @@ use anyhow::Result;
 
 use dbus::{blocking::LocalConnection, tree::Factory};
 
-use std::time::Duration;
 use std::sync::Arc;
+use std::time::Duration;
 
 use crate::Library;
 

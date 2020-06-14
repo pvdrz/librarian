@@ -1,4 +1,4 @@
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use std::collections::BTreeMap;
 use std::str::FromStr;
@@ -12,7 +12,7 @@ pub struct Doc {
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd)]
-pub struct DocId(usize);
+pub struct DocId(pub usize);
 
 impl FromStr for DocId {
     type Err = std::num::ParseIntError;
@@ -37,4 +37,11 @@ where
         .enumerate()
         .map(|(i, doc)| (DocId(i), doc))
         .collect())
+}
+
+pub fn serialize_docs<S>(docs: &BTreeMap<DocId, Doc>, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    docs.values().collect::<Vec<_>>().serialize(serializer)
 }

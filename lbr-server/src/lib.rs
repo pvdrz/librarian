@@ -2,7 +2,7 @@
 #![feature(const_generic_impls_guard)]
 #![allow(incomplete_features)]
 
-use serde::Deserialize;
+use serde::{Serialize, Deserialize};
 
 use anyhow::{Context, Result};
 
@@ -16,15 +16,18 @@ mod text;
 
 use text::Indices;
 
-use doc::{deserialize_docs, Doc, DocId};
+use doc::{deserialize_docs, serialize_docs, Doc, DocId};
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct Library {
     #[serde(deserialize_with = "deserialize_docs")]
+    #[serde(serialize_with = "serialize_docs")]
     docs: BTreeMap<DocId, Doc>,
     root: PathBuf,
     #[serde(skip)]
     indices: Indices,
+    #[serde(skip)]
+    last: usize,
 }
 
 impl Library {
@@ -35,6 +38,7 @@ impl Library {
         for (id, doc) in &library.docs {
             library.indices.insert(*id, doc);
         }
+        library.last = library.docs.len();
         Ok(library)
     }
 
@@ -50,6 +54,26 @@ impl Library {
         let name = &self.get(id).filename;
         let path = self.root.join(name);
         open::that(path)?;
+        Ok(())
+    }
+
+    pub fn insert(&mut self, doc: Doc) -> Result<()> {
+        let id = DocId(self.last);
+        self.last += 1;
+        self.indices.insert(id, &doc);
+        self.docs.insert(id, doc);
+
+        let mut file = File::open(self.root.join("index.json"))?;
+        serde_json::to_writer(&mut file, self)?;
+        Ok(())
+    }
+
+    pub fn remove(&mut self, id: DocId) -> Result<()> {
+        self.indices.remove(id);
+        self.docs.remove(&id);
+
+        let mut file = File::open(self.root.join("index.json"))?;
+        serde_json::to_writer(&mut file, self)?;
         Ok(())
     }
 }

@@ -37,7 +37,7 @@ impl Indices {
         );
     }
 
-    pub fn remove(&mut self, id: &DocId) {
+    pub fn remove(&mut self, id: DocId) {
         self.title.remove(&id);
         self.authors.remove(&id);
         self.keywords.remove(&id);

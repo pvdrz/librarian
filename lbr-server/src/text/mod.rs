@@ -1,26 +1,25 @@
 mod index;
 
-use index::Index;
+use index::TextIndex;
 
-use crate::Doc;
-use crate::DocId;
+use crate::doc::{Doc, DocId};
 
-pub struct Indices {
-    title: Index<3>,
-    authors: Index<3>,
-    keywords: Index<3>,
+pub(crate) struct SearchEngine {
+    title: TextIndex<3>,
+    authors: TextIndex<3>,
+    keywords: TextIndex<3>,
 }
 
-impl Default for Indices {
+impl Default for SearchEngine {
     fn default() -> Self {
-        Indices {
-            title: Index::default(),
-            authors: Index::default(),
-            keywords: Index::default(),
+        SearchEngine {
+            title: TextIndex::default(),
+            authors: TextIndex::default(),
+            keywords: TextIndex::default(),
         }
     }
 }
-impl Indices {
+impl SearchEngine {
     pub(crate) fn insert(&mut self, id: DocId, doc: &Doc) {
         self.title.insert(id, doc.title.to_lowercase().as_bytes());
         self.authors.insert_many(
@@ -37,13 +36,13 @@ impl Indices {
         );
     }
 
-    pub fn remove(&mut self, id: DocId) {
+    pub(crate) fn remove(&mut self, id: DocId) {
         self.title.remove(&id);
         self.authors.remove(&id);
         self.keywords.remove(&id);
     }
 
-    pub fn search(&self, text: &str, limit: usize) -> Vec<(DocId, f32)> {
+    pub(crate) fn search(&self, text: &str, limit: usize) -> Vec<(DocId, f32)> {
         let text = text.to_lowercase();
         let text = text.as_bytes();
 

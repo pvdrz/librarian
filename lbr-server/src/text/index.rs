@@ -2,10 +2,10 @@ use std::array::LengthAtMost32;
 use std::collections::{BTreeMap, HashMap};
 use std::convert::TryFrom;
 
-use crate::DocId;
+use crate::doc::DocId;
 
 #[derive(Default)]
-pub struct Index<const N: usize> {
+pub(crate) struct TextIndex<const N: usize> {
     grams: HashMap<[u8; N], Freqs>,
     total_docs: f32,
 }
@@ -49,11 +49,11 @@ impl Freqs {
     }
 }
 
-impl<const N: usize> Index<N>
+impl<const N: usize> TextIndex<N>
 where
     [u8; N]: LengthAtMost32,
 {
-    pub fn search(&self, text: &[u8]) -> BTreeMap<DocId, f32> {
+    pub(crate) fn search(&self, text: &[u8]) -> BTreeMap<DocId, f32> {
         let mut scores = BTreeMap::new();
 
         for gram in text.windows(N) {
@@ -70,7 +70,7 @@ where
         scores
     }
 
-    pub fn insert(&mut self, id: DocId, text: &[u8]) {
+    pub(crate) fn insert(&mut self, id: DocId, text: &[u8]) {
         for gram in text.windows(N) {
             let gram = <[u8; N]>::try_from(gram).unwrap();
             self.grams
@@ -81,7 +81,7 @@ where
         self.total_docs += 1.0;
     }
 
-    pub fn insert_many(&mut self, id: DocId, texts: impl Iterator<Item = Vec<u8>>) {
+    pub(crate) fn insert_many(&mut self, id: DocId, texts: impl Iterator<Item = Vec<u8>>) {
         for text in texts {
             for gram in text.windows(N) {
                 let gram = <[u8; N]>::try_from(gram).unwrap();
@@ -94,7 +94,7 @@ where
         self.total_docs += 1.0;
     }
 
-    pub fn remove(&mut self, id: &DocId) {
+    pub(crate) fn remove(&mut self, id: &DocId) {
         for freqs in self.grams.values_mut() {
             freqs.decrease(&id);
         }

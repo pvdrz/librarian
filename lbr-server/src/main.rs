@@ -1,12 +1,5 @@
-use lbr_server::dbus::run;
-use lbr_server::Library;
+use anyhow::Result;
 
-use std::path::PathBuf;
-
-fn main() {
-    let lib = Library::from_file(&PathBuf::from(
-        "/home/christian/MEGAsync/Books/new_index.json",
-    ))
-    .unwrap();
-    run(lib).unwrap();
+fn main() -> Result<()> {
+    lbr_server::run()
 }

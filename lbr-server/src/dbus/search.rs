@@ -9,7 +9,7 @@ use dbus::{
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use crate::Library;
+use crate::library::Library;
 
 pub(super) fn create_interface(lib: Arc<Library>) -> Interface<MTFn, ()> {
     let fact = Factory::new_fn::<()>();

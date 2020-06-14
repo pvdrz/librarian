@@ -5,11 +5,11 @@ use dbus::{blocking::LocalConnection, tree::Factory};
 use std::sync::Arc;
 use std::time::Duration;
 
-use crate::Library;
+use crate::library::Library;
 
 mod search;
 
-pub fn run(lib: Library) -> Result<()> {
+pub(crate) fn serve(lib: Library) -> Result<()> {
     let mut conn = LocalConnection::new_session()?;
     conn.request_name("lbr.server", false, true, false)?;
 

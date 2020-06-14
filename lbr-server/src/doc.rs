@@ -12,7 +12,7 @@ pub struct Doc {
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd)]
-pub struct DocId(pub usize);
+pub struct DocId(pub(crate) usize);
 
 impl FromStr for DocId {
     type Err = std::num::ParseIntError;
@@ -28,7 +28,7 @@ impl ToString for DocId {
     }
 }
 
-pub fn deserialize_docs<'de, D>(deserializer: D) -> Result<BTreeMap<DocId, Doc>, D::Error>
+pub(crate) fn deserialize_docs<'de, D>(deserializer: D) -> Result<BTreeMap<DocId, Doc>, D::Error>
 where
     D: Deserializer<'de>,
 {
@@ -39,7 +39,7 @@ where
         .collect())
 }
 
-pub fn serialize_docs<S>(docs: &BTreeMap<DocId, Doc>, serializer: S) -> Result<S::Ok, S::Error>
+pub(crate) fn serialize_docs<S>(docs: &BTreeMap<DocId, Doc>, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {

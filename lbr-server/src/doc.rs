@@ -1,6 +1,6 @@
 use serde::{Deserialize, Deserializer, Serialize};
 
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::str::FromStr;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -11,7 +11,7 @@ pub struct Doc {
     pub filename: String,
 }
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd)]
 pub struct DocId(usize);
 
 impl FromStr for DocId {
@@ -28,7 +28,7 @@ impl ToString for DocId {
     }
 }
 
-pub fn deserialize_docs<'de, D>(deserializer: D) -> Result<HashMap<DocId, Doc>, D::Error>
+pub fn deserialize_docs<'de, D>(deserializer: D) -> Result<BTreeMap<DocId, Doc>, D::Error>
 where
     D: Deserializer<'de>,
 {

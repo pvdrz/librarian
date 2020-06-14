@@ -1,5 +1,5 @@
 use std::array::LengthAtMost32;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::convert::TryFrom;
 
 use crate::DocId;
@@ -12,7 +12,7 @@ pub struct Index<const N: usize> {
 
 #[derive(Default)]
 struct Freqs {
-    freqs: HashMap<DocId, f32>,
+    freqs: BTreeMap<DocId, f32>,
     max_freq: f32,
 }
 
@@ -53,8 +53,8 @@ impl<const N: usize> Index<N>
 where
     [u8; N]: LengthAtMost32,
 {
-    pub fn search(&self, text: &[u8]) -> HashMap<DocId, f32> {
-        let mut scores = HashMap::new();
+    pub fn search(&self, text: &[u8]) -> BTreeMap<DocId, f32> {
+        let mut scores = BTreeMap::new();
 
         for gram in text.windows(N) {
             if let Some(freqs) = self.grams.get(gram) {

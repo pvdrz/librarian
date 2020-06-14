@@ -2,11 +2,11 @@
 #![feature(const_generic_impls_guard)]
 #![allow(incomplete_features)]
 
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 use anyhow::{Context, Result};
 
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::fs::File;
 use std::path::{Path, PathBuf};
 
@@ -21,7 +21,7 @@ use doc::{deserialize_docs, Doc, DocId};
 #[derive(Deserialize)]
 pub struct Library {
     #[serde(deserialize_with = "deserialize_docs")]
-    docs: HashMap<DocId, Doc>,
+    docs: BTreeMap<DocId, Doc>,
     root: PathBuf,
     #[serde(skip)]
     indices: Indices,

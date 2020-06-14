@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 
 use dbus::{
     arg::Variant,
@@ -7,11 +7,11 @@ use dbus::{
 };
 
 use std::collections::HashMap;
-use std::sync::Arc;
+use std::sync::{Mutex, Arc};
 
 use crate::library::Library;
 
-pub(super) fn create_interface(lib: Arc<Library>) -> Interface<MTFn, ()> {
+pub(super) fn create_interface(lib: Arc<Mutex<Library>>) -> Interface<MTFn, ()> {
     let fact = Factory::new_fn::<()>();
 
     fact.interface("org.gnome.Shell.SearchProvider2", ())
@@ -21,7 +21,7 @@ pub(super) fn create_interface(lib: Arc<Library>) -> Interface<MTFn, ()> {
         .add_m(create_activate_result(lib))
 }
 
-fn create_get_initial_result_set(lib: Arc<Library>) -> Method<MTFn, ()> {
+fn create_get_initial_result_set(lib: Arc<Mutex<Library>>) -> Method<MTFn, ()> {
     let fact = Factory::new_fn::<()>();
     fact.method("GetInitialResultSet", (), move |m| {
         let terms: Vec<&str> = m.msg.read1()?;
@@ -37,14 +37,16 @@ fn create_get_initial_result_set(lib: Arc<Library>) -> Method<MTFn, ()> {
     .inarg::<Vec<&str>, _>("terms")
 }
 
-fn get_initial_result_set(lib: Arc<Library>, terms: Vec<&str>) -> Result<Vec<String>> {
+fn get_initial_result_set(lib: Arc<Mutex<Library>>, terms: Vec<&str>) -> Result<Vec<String>> {
+    let lib = lib.lock().map_err(|e| anyhow!("Failed to lock: {}", e))?;
+
     Ok(lib
         .search(&terms.join(" "))
         .map(|id| id.to_string())
         .collect())
 }
 
-fn create_get_subsearch_result_set(lib: Arc<Library>) -> Method<MTFn, ()> {
+fn create_get_subsearch_result_set(lib: Arc<Mutex<Library>>) -> Method<MTFn, ()> {
     let fact = Factory::new_fn::<()>();
     fact.method("GetSubsearchResultSet", (), move |m| {
         let (previous_results, terms): (Vec<&str>, Vec<&str>) = m.msg.read2()?;
@@ -62,14 +64,14 @@ fn create_get_subsearch_result_set(lib: Arc<Library>) -> Method<MTFn, ()> {
 }
 
 fn get_subsearch_result_set<'a>(
-    lib: Arc<Library>,
+    lib: Arc<Mutex<Library>>,
     _previous_results: Vec<&str>,
     terms: Vec<&str>,
 ) -> Result<Vec<String>> {
     get_initial_result_set(lib, terms)
 }
 
-fn create_get_result_metas(lib: Arc<Library>) -> Method<MTFn, ()> {
+fn create_get_result_metas(lib: Arc<Mutex<Library>>) -> Method<MTFn, ()> {
     let fact = Factory::new_fn::<()>();
 
     fact.method("GetResultMetas", (), move |m| {
@@ -87,9 +89,11 @@ fn create_get_result_metas(lib: Arc<Library>) -> Method<MTFn, ()> {
 }
 
 fn get_result_metas(
-    lib: Arc<Library>,
+    lib: Arc<Mutex<Library>>,
     identifiers: Vec<&str>,
 ) -> Result<Vec<HashMap<&str, Variant<String>>>> {
+    let lib = lib.lock().map_err(|e| anyhow!("Failed to lock: {}", e))?;
+
     identifiers
         .into_iter()
         .map(|identifier| {
@@ -103,7 +107,7 @@ fn get_result_metas(
         .collect()
 }
 
-fn create_activate_result(lib: Arc<Library>) -> Method<MTFn, ()> {
+fn create_activate_result(lib: Arc<Mutex<Library>>) -> Method<MTFn, ()> {
     let fact = Factory::new_fn::<()>();
 
     fact.method("ActivateResult", (), move |m| {
@@ -120,10 +124,12 @@ fn create_activate_result(lib: Arc<Library>) -> Method<MTFn, ()> {
 }
 
 fn activate_result(
-    lib: Arc<Library>,
+    lib: Arc<Mutex<Library>>,
     identifier: &str,
     _terms: Vec<&str>,
     _timestamp: u32,
 ) -> Result<()> {
+    let lib = lib.lock().map_err(|e| anyhow!("Failed to lock: {}", e))?;
+
     lib.open(identifier.parse()?)
 }

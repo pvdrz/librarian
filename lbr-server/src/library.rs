@@ -26,7 +26,7 @@ pub(crate) struct Library {
 impl Library {
     pub(crate) fn from_file() -> Result<Self> {
         let path = PathBuf::from(std::env::var("LBRPATH")?);
-        let file = File::open(&path).context("Could not open index file")?;
+        let file = File::open(&path.join("index.json")).context("Could not open index file")?;
         let mut library: Library =
             serde_json::from_reader(file).context("Could not deserialize index contents")?;
         for (id, doc) in &library.docs {
@@ -67,7 +67,7 @@ impl Library {
     }
 
     fn write(&self) -> Result<()> {
-        let mut file = File::open(self.path.join("index.json"))?;
+        let mut file = File::create(self.path.join("index.json"))?;
         serde_json::to_writer(&mut file, self)?;
         Ok(())
     }

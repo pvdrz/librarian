@@ -52,7 +52,9 @@ impl Library {
         Ok(())
     }
 
-    pub(crate) fn insert(&mut self, doc: Doc) -> Result<()> {
+    pub(crate) fn insert(&mut self, doc: Doc, path: &str) -> Result<()> {
+        std::fs::copy(path, self.path.join(&doc.filename))?;
+
         let id = DocId(self.last);
         self.last += 1;
         self.engine.insert(id, &doc);

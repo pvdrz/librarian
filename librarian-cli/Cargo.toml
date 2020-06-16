@@ -1,0 +1,16 @@
+[package]
+name = "librarian-cli"
+version = "0.1.0"
+authors = ["Christian Poveda <git@christianpoveda.xyz>"]
+edition = "2018"
+
+[dependencies]
+dbus = "0.8.3"
+anyhow = "1.0.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+scrawl = "1.1.0"
+blake3 = "0.3.4"
+structopt = "0.3"
+ureq = "1.2.0"
+librarian-core = { path = "../librarian-core" }

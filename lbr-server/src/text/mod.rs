@@ -1,45 +1,41 @@
+use crate::doc::{Doc, DocId};
+
 mod index;
 
 use index::TextIndex;
 
-use crate::doc::{Doc, DocId};
-
+#[derive(Default)]
 pub(crate) struct SearchEngine {
     title: TextIndex<3>,
     authors: TextIndex<3>,
     keywords: TextIndex<3>,
 }
 
-impl Default for SearchEngine {
-    fn default() -> Self {
-        SearchEngine {
-            title: TextIndex::default(),
-            authors: TextIndex::default(),
-            keywords: TextIndex::default(),
-        }
-    }
-}
 impl SearchEngine {
-    pub(crate) fn insert(&mut self, id: DocId, doc: &Doc) {
+    pub(crate) fn index(&mut self, id: DocId, doc: &Doc) -> DocId {
         self.title.insert(id, doc.title.to_lowercase().as_bytes());
+
         self.authors.insert_many(
             id,
             doc.authors
                 .iter()
                 .map(|text| text.to_lowercase().into_bytes()),
         );
+
         self.keywords.insert_many(
             id,
             doc.keywords
                 .iter()
                 .map(|text| text.to_lowercase().into_bytes()),
         );
+
+        id
     }
 
-    pub(crate) fn remove(&mut self, id: DocId) {
-        self.title.remove(&id);
-        self.authors.remove(&id);
-        self.keywords.remove(&id);
+    pub(crate) fn deindex(&mut self, id: &DocId) {
+        self.title.remove(id);
+        self.authors.remove(id);
+        self.keywords.remove(id);
     }
 
     pub(crate) fn search(&self, text: &str, limit: usize) -> Vec<(DocId, f32)> {

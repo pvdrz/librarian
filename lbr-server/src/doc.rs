@@ -1,17 +1,50 @@
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Deserialize, Serialize};
 
-use std::collections::BTreeMap;
 use std::str::FromStr;
+use std::fmt;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Doc {
     pub title: String,
     pub authors: Vec<String>,
     pub keywords: Vec<String>,
-    pub filename: String,
+    pub extension: String,
+    pub show: bool,
+    pub hash: DocHash,
 }
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd)]
+impl Doc {
+    pub(crate) fn filename(&self) -> String {
+        self.hash.to_string() + "." + &self.extension
+    }
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
+pub struct DocHash(#[serde(with = "hex_serde")] [u8; 32]);
+
+impl DocHash {
+    pub(crate) fn from_bytes(bytes: &[u8]) -> Self {
+        DocHash(blake3::hash(bytes).into())
+    }
+}
+
+impl FromStr for DocHash {
+    type Err = hex::FromHexError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut bytes = [0; 32];
+        hex::decode_to_slice(s, &mut bytes)?;
+        Ok(DocHash(bytes))
+    }
+}
+
+impl fmt::Display for DocHash {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", hex::encode(self.0))
+    }
+}
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
 pub struct DocId(pub(crate) usize);
 
 impl FromStr for DocId {
@@ -22,26 +55,8 @@ impl FromStr for DocId {
     }
 }
 
-impl ToString for DocId {
-    fn to_string(&self) -> String {
-        self.0.to_string()
+impl fmt::Display for DocId {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.0)
     }
-}
-
-pub(crate) fn deserialize_docs<'de, D>(deserializer: D) -> Result<BTreeMap<DocId, Doc>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    Ok(Vec::deserialize(deserializer)?
-        .into_iter()
-        .enumerate()
-        .map(|(i, doc)| (DocId(i), doc))
-        .collect())
-}
-
-pub(crate) fn serialize_docs<S>(docs: &BTreeMap<DocId, Doc>, serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-{
-    docs.values().collect::<Vec<_>>().serialize(serializer)
 }

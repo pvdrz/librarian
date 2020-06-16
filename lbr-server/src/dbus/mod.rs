@@ -99,7 +99,7 @@ impl OrgGnomeShellSearchProvider2 for LibrarySync {
 
         for identifier in identifiers {
             let id = identifier.parse().map_err(|e| MethodErr::failed(&e))?;
-            let doc = lib.get(id);
+            let doc = lib.get(id).map_err(|e| MethodErr::failed(&e))?;
 
             let id: Variant<Box<dyn RefArg + 'static>> = Variant(Box::new(id.to_string()));
             let name: Variant<Box<dyn RefArg + 'static>> = Variant(Box::new(doc.title.clone()));
@@ -141,15 +141,12 @@ impl AsRef<dyn OrgGnomeShellSearchProvider2 + 'static> for LibrarySync {
 }
 
 impl LbrCli for LibrarySync {
-    fn insert(&self, document: HashMap<&str, Variant<Box<dyn RefArg>>>, path: &str) -> Result<(), MethodErr> {
+    fn insert(&self, doc: &str, path: &str) -> Result<(), MethodErr> {
         let mut lib = self.write().map_err(|e| MethodErr::failed(&e))?;
 
-        let title = document.get("title").unwrap().as_str().unwrap().to_string();
-        let authors = document.get("authors").unwrap().as_iter().unwrap().map(|author| author.as_str().unwrap().to_string()).collect();
-        let keywords = document.get("keywords").unwrap().as_iter().unwrap().map(|author| author.as_str().unwrap().to_string()).collect();
-        let filename = document.get("filename").unwrap().as_str().unwrap().to_string();
+        let doc = serde_json::from_str(doc).map_err(|e| MethodErr::failed(&e))?;
 
-        lib.insert(Doc { title, authors, keywords, filename }, path).map_err(|e| MethodErr::failed(&e))
+        lib.insert(doc, path).map_err(|e| MethodErr::failed(&e))
     }
 }
 

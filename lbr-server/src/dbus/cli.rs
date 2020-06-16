@@ -4,7 +4,7 @@ use dbus::arg;
 use dbus::tree;
 
 pub trait LbrCli {
-    fn insert(&self, document: ::std::collections::HashMap<&str, arg::Variant<Box<dyn arg::RefArg>>>, path: &str) -> Result<(), tree::MethodErr>;
+    fn insert(&self, doc: &str, path: &str) -> Result<(), tree::MethodErr>;
 }
 
 pub fn lbr_cli_server<F, T, D>(factory: &tree::Factory<tree::MTFn<D>, D>, data: D::Interface, f: F) -> tree::Interface<tree::MTFn<D>, D>
@@ -19,16 +19,16 @@ where
     let fclone = f.clone();
     let h = move |minfo: &tree::MethodInfo<tree::MTFn<D>, D>| {
         let mut i = minfo.msg.iter_init();
-        let document: ::std::collections::HashMap<&str, arg::Variant<Box<dyn arg::RefArg>>> = i.read()?;
+        let doc: &str = i.read()?;
         let path: &str = i.read()?;
         let dd = fclone(minfo);
         let d = dd.as_ref();
-        d.insert(document, path)?;
+        d.insert(doc, path)?;
         let rm = minfo.msg.method_return();
         Ok(vec!(rm))
     };
     let m = factory.method("Insert", Default::default(), h);
-    let m = m.in_arg(("document", "a{sv}"));
+    let m = m.in_arg(("doc", "s"));
     let m = m.in_arg(("path", "s"));
     let i = i.add_m(m);
     i

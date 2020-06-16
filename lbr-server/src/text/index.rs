@@ -76,7 +76,7 @@ where
             self.grams
                 .entry(gram)
                 .or_insert_with(|| Freqs::default())
-                .increase(id);
+                .increase(id.clone());
         }
         self.total_docs += 1.0;
     }
@@ -88,7 +88,7 @@ where
                 self.grams
                     .entry(gram)
                     .or_insert_with(|| Freqs::default())
-                    .increase(id);
+                    .increase(id.clone());
             }
         }
         self.total_docs += 1.0;

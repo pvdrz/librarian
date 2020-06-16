@@ -2,7 +2,7 @@ use std::array::LengthAtMost32;
 use std::collections::{BTreeMap, HashMap};
 use std::convert::TryFrom;
 
-use crate::doc::DocId;
+use crate::library::DocId;
 
 #[derive(Default)]
 pub(crate) struct TextIndex<const N: usize> {

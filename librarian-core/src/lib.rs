@@ -14,7 +14,7 @@ pub struct Doc {
 }
 
 impl Doc {
-    pub(crate) fn filename(&self) -> String {
+    pub fn filename(&self) -> String {
         self.hash.to_string() + "." + &self.extension
     }
 }
@@ -23,7 +23,7 @@ impl Doc {
 pub struct DocHash(#[serde(with = "hex")] [u8; 32]);
 
 impl DocHash {
-    pub(crate) fn from_bytes(bytes: &[u8]) -> Self {
+    pub fn from_bytes(bytes: &[u8]) -> Self {
         DocHash(blake3::hash(bytes).into())
     }
 }
@@ -41,22 +41,5 @@ impl FromStr for DocHash {
 impl fmt::Display for DocHash {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", hex::encode(self.0))
-    }
-}
-
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
-pub struct DocId(pub(crate) usize);
-
-impl FromStr for DocId {
-    type Err = std::num::ParseIntError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(DocId(s.parse()?))
-    }
-}
-
-impl fmt::Display for DocId {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.0)
     }
 }

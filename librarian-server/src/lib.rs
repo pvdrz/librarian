@@ -4,7 +4,6 @@
 
 use anyhow::Result;
 
-pub mod doc;
 mod dbus;
 mod text;
 mod library;

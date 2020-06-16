@@ -1,5 +1,5 @@
 use anyhow::Result;
 
 fn main() -> Result<()> {
-    lbr_server::run()
+    librarian_server::run()
 }

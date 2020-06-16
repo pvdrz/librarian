@@ -5,8 +5,11 @@ use anyhow::{anyhow, Context, Result};
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::path::PathBuf;
+use std::str::FromStr;
+use std::fmt;
 
-use crate::doc::{Doc, DocId};
+use librarian_core::Doc;
+
 use crate::text::SearchEngine;
 
 #[derive(Deserialize, Serialize)]
@@ -85,5 +88,22 @@ impl Library {
         let id = DocId(self.last);
         self.last += 1;
         id
+    }
+}
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
+pub struct DocId(pub(crate) usize);
+
+impl FromStr for DocId {
+    type Err = std::num::ParseIntError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(DocId(s.parse()?))
+    }
+}
+
+impl fmt::Display for DocId {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.0)
     }
 }

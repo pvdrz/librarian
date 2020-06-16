@@ -11,7 +11,6 @@ use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::time::Duration;
 
 use crate::library::Library;
-use crate::doc::Doc;
 
 mod cli;
 mod search;

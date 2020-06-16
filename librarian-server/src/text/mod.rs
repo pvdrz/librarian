@@ -1,4 +1,6 @@
-use crate::doc::{Doc, DocId};
+use librarian_core::Doc;
+
+use crate::library::DocId;
 
 mod index;
 

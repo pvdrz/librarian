@@ -20,7 +20,7 @@ impl Doc {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
-pub struct DocHash(#[serde(with = "hex_serde")] [u8; 32]);
+pub struct DocHash(#[serde(with = "hex")] [u8; 32]);
 
 impl DocHash {
     pub(crate) fn from_bytes(bytes: &[u8]) -> Self {

@@ -69,6 +69,7 @@ impl Library {
 
         std::fs::copy(path, new_path)?;
 
+        self.engine.index(id, &doc);
         self.docs.insert(id, doc);
         self.persist()
     }

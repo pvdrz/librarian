@@ -1,15 +1,26 @@
+use std::path::PathBuf;
+
 use anyhow::{anyhow, Context, Result};
 
 use serde::{Deserialize, Serialize};
 
-use dbus::blocking::{Connection, Proxy};
-
-use std::path::PathBuf;
-use std::time::Duration;
+use structopt::StructOpt;
 
 use librarian_core::{Doc, DocHash};
+use zbus::dbus_proxy;
 
-use structopt::StructOpt;
+#[dbus_proxy(
+    interface = "org.gnome.Shell.SearchProvider2",
+    default_service = "lbr.server",
+    default_path = "/lbr/server"
+)]
+trait Server {
+    fn insert_document(&self, doc: &str, path: &str) -> zbus::Result<()> {
+        let doc = serde_json::from_str(doc).map_err(|err| Error::Failed(err.to_string()))?;
+        self.insert(doc, path)
+            .map_err(|err| Error::Failed(err.to_string()))
+    }
+}
 
 #[derive(StructOpt, Debug)]
 #[structopt(
@@ -24,13 +35,13 @@ pub enum Command {
 }
 
 impl Command {
-    fn run(self, proxy: &Proxy<&Connection>) -> Result<()> {
+    fn run(self, proxy: &ServerProxy) -> Result<()> {
         match self {
             Command::Add { path } => Self::add(path, proxy),
         }
     }
 
-    fn add(path: String, proxy: &Proxy<&Connection>) -> Result<()> {
+    fn add(path: String, proxy: &ServerProxy) -> Result<()> {
         let path = PathBuf::from(path);
         let bytes = std::fs::read(&path)?;
 
@@ -58,7 +69,7 @@ impl Command {
             .to_str()
             .ok_or_else(|| anyhow!("Path {:?} is not valid unicode", path))?;
 
-        proxy.method_call("lbr.cli", "Insert", (doc, path))?;
+        proxy.insert_document(&doc, &path)?;
 
         Ok(())
     }
@@ -81,12 +92,8 @@ impl DocData {
 fn main() -> Result<()> {
     let cmd = Command::from_args();
 
-    let conn = Connection::new_session()?;
-    let proxy = conn.with_proxy("lbr.server", "/lbr/server/cli", Duration::from_millis(5000));
+    let connection = zbus::Connection::new_session()?;
+    let proxy = ServerProxy::new(&connection)?;
 
     cmd.run(&proxy)
-    // let (names,): (Vec<String>,) = proxy.method_call("lbr.cli", "ListNames", ())?;
-
-    // Let's print all the names to stdout.
-    // for name in names { println!("{}", name); }
 }

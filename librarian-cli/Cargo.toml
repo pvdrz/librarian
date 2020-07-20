@@ -5,7 +5,8 @@ authors = ["Christian Poveda <git@christianpoveda.xyz>"]
 edition = "2018"
 
 [dependencies]
-dbus = "0.8.3"
+zbus = "1.0.0"
+zvariant = "2.0.0"
 anyhow = "1.0.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"

@@ -42,7 +42,7 @@ impl Command {
     }
 
     fn add(path: String, proxy: &ServerProxy) -> Result<()> {
-        let path = PathBuf::from(path);
+        let path = PathBuf::from(path).canonicalize()?;
         let bytes = std::fs::read(&path)?;
 
         let extension = path

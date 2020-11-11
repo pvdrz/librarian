@@ -1,4 +1,3 @@
-use std::array::LengthAtMost32;
 use std::collections::{BTreeMap, HashMap};
 use std::convert::TryFrom;
 
@@ -49,10 +48,7 @@ impl Freqs {
     }
 }
 
-impl<const N: usize> TextIndex<N>
-where
-    [u8; N]: LengthAtMost32,
-{
+impl<const N: usize> TextIndex<N> {
     pub(crate) fn search(&self, text: &[u8]) -> BTreeMap<DocId, f32> {
         let mut scores = BTreeMap::new();
 

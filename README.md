@@ -1,5 +1,9 @@
 # Librarian
 
+**This repo is now archived**. The spiritual successor to this project can be found here: https://github.com/pvdrz/domain.
+
+## Description
+
 This is a tiny command-line application to manage your digital library.
 
 ## Why?
